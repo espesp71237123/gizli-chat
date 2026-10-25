@@ -1,26 +1,30 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gizli P2P Sohbet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gizli Bulut Sohbet</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         body { background-color: #030712; color: #f3f4f6; }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden select-none">
+<body class="h-[100dvh] flex flex-col overflow-hidden select-none">
 
     <!-- SETUP SCREEN (First Login) -->
     <div id="setup-screen" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 hidden">
         <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col items-center">
             <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 text-3xl mb-4 border border-emerald-500/20">
-                <i class="fa-solid fa-shield-cat"></i>
+                <i class="fa-solid fa-cloud"></i>
             </div>
             <h1 class="text-2xl font-bold text-white mb-2">Gizli Sohbet</h1>
-            <p class="text-xs text-slate-400 text-center mb-6">Sunucusuz, tamamen cihazlar arası şifreli ve kalıcı P2P mesajlaşma sistemi.</p>
+            <p class="text-xs text-slate-400 text-center mb-6">Çevrimdışı mesaj destekli, hızlı ve güvenli mesajlaşma platformu.</p>
             
             <div class="w-full space-y-4">
                 <div>
@@ -44,12 +48,12 @@
                 <div>
                     <h2 class="text-sm font-bold text-white" id="my-display-name">İsimsiz</h2>
                     <p class="text-[10px] text-emerald-400 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Cihaz Çevrimiçi
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Bulut Bağlantısı Aktif
                     </p>
                 </div>
             </div>
-            <div id="connection-status" class="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">
-                Bağlantı Bekleniyor...
+            <div id="connection-status" class="text-[10px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800">
+                Çevrimiçi
             </div>
         </header>
 
@@ -57,7 +61,7 @@
         <main class="flex-1 overflow-hidden relative flex flex-col">
             
             <!-- TAB 1: CHATS / FRIENDS LIST -->
-            <div id="tab-chats" class="absolute inset-0 flex flex-col p-4 overflow-y-auto space-y-3">
+            <div id="tab-chats" class="absolute inset-0 flex flex-col p-4 overflow-y-auto space-y-3 pb-20">
                 <div class="flex items-center justify-between mb-1">
                     <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Arkadaşlarım</h3>
                     <span id="friend-count" class="text-xs text-slate-500">0 kayıtlı</span>
@@ -75,10 +79,10 @@
             </div>
 
             <!-- TAB 2: ADD FRIEND -->
-            <div id="tab-add" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4">
+            <div id="tab-add" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
                     <h3 class="text-sm font-bold text-white mb-1">Yeni Arkadaş Ekle</h3>
-                    <p class="text-xs text-slate-400 mb-4">Arkadaşının sana gönderdiği özel ID kodunu ve ona vermek istediğin ismi aşağıya yaz.</p>
+                    <p class="text-xs text-slate-400 mb-4">Arkadaşının özel kopyalanan ID kodunu ve ona vermek istediğin ismi aşağıya yaz.</p>
                     
                     <div class="space-y-3">
                         <div>
@@ -86,22 +90,22 @@
                             <input type="text" id="friend-name-input" placeholder="Örn: En yakın kanka" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-medium text-slate-300 mb-1">Arkadaşın Sabit Cihaz ID'si</label>
-                            <input type="text" id="friend-id-input" placeholder="Peer ID yapıştır..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600 font-mono">
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">Arkadaşın Özel ID'si</label>
+                            <input type="text" id="friend-id-input" placeholder="ID yapıştır..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600 font-mono">
                         </div>
                         <button onclick="addFriend()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow">
-                            Rehbere Kaydet ve Bağlan
+                            Rehbere Kaydet
                         </button>
                     </div>
                 </div>
             </div>
 
             <!-- TAB 3: PROFILE / MY ID -->
-            <div id="tab-profile" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4">
+            <div id="tab-profile" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
                     <div class="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl font-bold mb-3" id="profile-big-avatar">H</div>
                     <h3 class="text-base font-bold text-white" id="profile-name-display">İsimsiz</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Sabit Cihaz Kimliğin (ID):</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Özel Kimliğin (ID):</p>
                     
                     <div class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 mt-3 flex items-center justify-between gap-2">
                         <span id="my-peer-id-text" class="text-xs font-mono text-emerald-400 truncate select-all">Yükleniyor...</span>
@@ -122,7 +126,7 @@
                         </button>
                         <div>
                             <h3 class="text-sm font-bold text-white" id="active-chat-name">Arkadaş</h3>
-                            <span class="text-[10px] text-slate-400" id="active-chat-status">Bağlanıyor...</span>
+                            <span class="text-[10px] text-emerald-400" id="active-chat-status">Bulut Odası Aktif</span>
                         </div>
                     </div>
                 </div>
@@ -142,7 +146,7 @@
         </main>
 
         <!-- BOTTOM NAVIGATION -->
-        <nav class="bg-slate-900 border-t border-slate-800 px-6 py-2 flex items-center justify-around shrink-0">
+        <nav class="bg-slate-900 border-t border-slate-800 px-6 py-2.5 flex items-center justify-around shrink-0 z-30">
             <button onclick="switchTab('chats')" id="nav-chats" class="flex flex-col items-center text-emerald-400 transition py-1">
                 <i class="fa-solid fa-comments text-lg"></i>
                 <span class="text-[10px] mt-1 font-medium">Sohbetler</span>
@@ -160,13 +164,21 @@
     </div>
 
     <script>
+        const firebaseConfig = {
+            databaseURL: "https://gizli-chat-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch(e) {}
+        
+        const db = firebase.database();
+
         let myProfile = JSON.parse(localStorage.getItem('p2p_profile')) || null;
         let friends = JSON.parse(localStorage.getItem('p2p_friends')) || [];
-        let messages = JSON.parse(localStorage.getItem('p2p_messages')) || {};
-        
-        let peer = null;
-        let activeConn = null;
-        let activePeerId = null;
+        let activeFriend = null;
+        let activeRoomId = null;
+        let chatListener = null;
 
         window.onload = () => {
             if (!myProfile) {
@@ -184,7 +196,7 @@
             }
             let deviceId = localStorage.getItem('p2p_device_id');
             if (!deviceId) {
-                deviceId = 'gizli-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36);
+                deviceId = 'user_' + Math.random().toString(36).substring(2, 9);
                 localStorage.setItem('p2p_device_id', deviceId);
             }
 
@@ -201,23 +213,6 @@
             document.getElementById('profile-name-display').innerText = myProfile.name;
             document.getElementById('profile-big-avatar').innerText = myProfile.name.charAt(0).toUpperCase();
             document.getElementById('my-peer-id-text').innerText = myProfile.id;
-
-            peer = new Peer(myProfile.id);
-
-            peer.on('open', (id) => {
-                document.getElementById('connection-status').innerText = "Çevrimiçi";
-                document.getElementById('connection-status').className = "text-[10px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800";
-            });
-
-            peer.on('connection', (conn) => {
-                setupConnection(conn);
-            });
-
-            peer.on('error', (err) => {
-                console.error(err);
-                document.getElementById('connection-status').innerText = "Bağlantı Hatası";
-                document.getElementById('connection-status').className = "text-[10px] bg-red-950 text-red-400 px-2.5 py-1 rounded-full border border-red-800";
-            });
 
             renderFriends();
         }
@@ -303,51 +298,57 @@
             });
         }
 
+        function getRoomId(id1, id2) {
+            return [id1, id2].sort().join('_');
+        }
+
         function openChat(friend) {
-            activePeerId = friend.id;
+            activeFriend = friend;
+            activeRoomId = getRoomId(myProfile.id, friend.id);
+            
             document.getElementById('active-chat-name').innerText = friend.name;
-            document.getElementById('active-chat-status').innerText = "Bağlanıyor...";
             document.getElementById('chat-window').classList.remove('hidden');
             
-            renderMessages();
-
-            const conn = peer.connect(friend.id);
-            setupConnection(conn);
+            listenMessages();
         }
 
         function closeChat() {
             document.getElementById('chat-window').classList.add('hidden');
-            activePeerId = null;
-            if (activeConn) {
-                activeConn.close();
-                activeConn = null;
+            if (chatListener) {
+                db.ref('chats/' + activeRoomId).off('value', chatListener);
             }
+            activeFriend = null;
+            activeRoomId = null;
         }
 
-        function setupConnection(conn) {
-            activeConn = conn;
-            
-            conn.on('open', () => {
-                if (activePeerId === conn.peer) {
-                    document.getElementById('active-chat-status').innerText = "Çevrimiçi (Bağlı)";
-                    document.getElementById('active-chat-status').className = "text-[10px] text-emerald-400";
-                }
-            });
+        function listenMessages() {
+            const container = document.getElementById('message-container');
+            container.innerHTML = '<div class="text-center text-xs text-slate-600 py-4">Mesajlar yükleniyor...</div>';
 
-            conn.on('data', (data) => {
-                if (!messages[conn.peer]) messages[conn.peer] = [];
-                messages[conn.peer].push({ sender: 'them', text: data.text, time: data.time });
-                localStorage.setItem('p2p_messages', JSON.stringify(messages));
-                
-                if (activePeerId === conn.peer) {
-                    renderMessages();
-                }
-            });
+            if (chatListener) {
+                db.ref('chats/' + activeRoomId).off();
+            }
 
-            conn.on('close', () => {
-                if (activePeerId === conn.peer) {
-                    document.getElementById('active-chat-status').innerText = "Bağlantı Kesildi";
-                    document.getElementById('active-chat-status').className = "text-[10px] text-red-400";
+            chatListener = db.ref('chats/' + activeRoomId).on('value', (snapshot) => {
+                container.innerHTML = '';
+                const data = snapshot.val();
+                if (data) {
+                    Object.values(data).forEach(msg => {
+                        const isMe = msg.senderId === myProfile.id;
+                        const div = document.createElement('div');
+                        div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+                        
+                        div.innerHTML = `
+                            <div class="max-w-[75%] rounded-2xl px-3.5 py-2 text-xs ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
+                                ${msg.text}
+                            </div>
+                            <span class="text-[9px] text-slate-500 mt-0.5 px-1">${msg.time}</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.innerHTML = '<div class="text-center text-xs text-slate-600 py-4">Henüz mesaj yok. İlk mesajı sen yaz!</div>';
                 }
             });
         }
@@ -355,50 +356,23 @@
         function sendMessage() {
             const input = document.getElementById('message-input');
             const text = input.value.trim();
-            if (!text || !activePeerId) return;
+            if (!text || !activeRoomId) return;
 
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            if (!messages[activePeerId]) messages[activePeerId] = [];
-            messages[activePeerId].push({ sender: 'me', text: text, time: time });
-            localStorage.setItem('p2p_messages', JSON.stringify(messages));
-            
-            renderMessages();
-            input.value = '';
 
-            if (activeConn && activeConn.open) {
-                activeConn.send({ text: text, time: time });
-            } else {
-                activeConn = peer.connect(activePeerId);
-                activeConn.on('open', () => {
-                    activeConn.send({ text: text, time: time });
-                });
-            }
+            const newMsgRef = db.ref('chats/' + activeRoomId).push();
+            newMsgRef.set({
+                senderId: myProfile.id,
+                text: text,
+                time: time,
+                timestamp: Date.now()
+            });
+
+            input.value = '';
         }
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendMessage();
-        }
-
-        function renderMessages() {
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
-
-            if (!activePeerId || !messages[activePeerId]) return;
-
-            messages[activePeerId].forEach(msg => {
-                const div = document.createElement('div');
-                div.className = `flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`;
-                
-                div.innerHTML = `
-                    <div class="max-w-[75%] rounded-2xl px-3.5 py-2 text-xs ${msg.sender === 'me' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
-                        ${msg.text}
-                    </div>
-                    <span class="text-[9px] text-slate-500 mt-0.5 px-1">${msg.time}</span>
-                `;
-                container.appendChild(div);
-            });
-            container.scrollTop = container.scrollHeight;
         }
     </script>
 </body>
