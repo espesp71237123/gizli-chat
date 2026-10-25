@@ -44,7 +44,7 @@
                 <div>
                     <h2 class="text-sm font-bold text-white" id="my-display-name">İsimsiz</h2>
                     <p class="text-[10px] text-emerald-400 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse">Cihaz Çevrimiçi</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Cihaz Çevrimiçi
                     </p>
                 </div>
             </div>
@@ -182,7 +182,6 @@
                 alert('Lütfen bir takma ad girin!');
                 return;
             }
-            // Generate permanent device ID if not exists
             let deviceId = localStorage.getItem('p2p_device_id');
             if (!deviceId) {
                 deviceId = 'gizli-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36);
@@ -203,7 +202,6 @@
             document.getElementById('profile-big-avatar').innerText = myProfile.name.charAt(0).toUpperCase();
             document.getElementById('my-peer-id-text').innerText = myProfile.id;
 
-            // Initialize PeerJS with permanent custom ID
             peer = new Peer(myProfile.id);
 
             peer.on('open', (id) => {
@@ -313,7 +311,6 @@
             
             renderMessages();
 
-            // Connect via PeerJS
             const conn = peer.connect(friend.id);
             setupConnection(conn);
         }
@@ -369,11 +366,9 @@
             renderMessages();
             input.value = '';
 
-            // Send via PeerJS connection
             if (activeConn && activeConn.open) {
                 activeConn.send({ text: text, time: time });
             } else {
-                // Try reconnecting
                 activeConn = peer.connect(activePeerId);
                 activeConn.on('open', () => {
                     activeConn.send({ text: text, time: time });
