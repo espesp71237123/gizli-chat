@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizli P2P Sohbet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #030712; color: #f3f4f6; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- SETUP SCREEN (First Login) -->
+    <div id="setup-screen" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 hidden">
+        <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col items-center">
+            <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 text-3xl mb-4 border border-emerald-500/20">
+                <i class="fa-solid fa-shield-cat"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">Gizli Sohbet</h1>
+            <p class="text-xs text-slate-400 text-center mb-6">Sunucusuz, tamamen cihazlar arası şifreli ve kalıcı P2P mesajlaşma sistemi.</p>
+            
+            <div class="w-full space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Takma Adın (Profil İsmi)</label>
+                    <input type="text" id="username-input" placeholder="Örn: Hayalet" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
+                </div>
+                <button onclick="saveProfile()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition text-sm shadow-lg shadow-emerald-950">
+                    Sisteme Giriş Yap
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP INTERFACE -->
+    <div id="app-screen" class="flex-1 flex flex-col h-full hidden overflow-hidden">
+        
+        <!-- HEADER -->
+        <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold" id="my-avatar">H</div>
+                <div>
+                    <h2 class="text-sm font-bold text-white" id="my-display-name">İsimsiz</h2>
+                    <p class="text-[10px] text-emerald-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse">Cihaz Çevrimiçi</span>
+                    </p>
+                </div>
+            </div>
+            <div id="connection-status" class="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">
+                Bağlantı Bekleniyor...
+            </div>
+        </header>
+
+        <!-- CONTENT AREA (Tabs) -->
+        <main class="flex-1 overflow-hidden relative flex flex-col">
+            
+            <!-- TAB 1: CHATS / FRIENDS LIST -->
+            <div id="tab-chats" class="absolute inset-0 flex flex-col p-4 overflow-y-auto space-y-3">
+                <div class="flex items-center justify-between mb-1">
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Arkadaşlarım</h3>
+                    <span id="friend-count" class="text-xs text-slate-500">0 kayıtlı</span>
+                </div>
+                
+                <div id="friends-list" class="space-y-2">
+                    <!-- Dynamic Friends Will Render Here -->
+                </div>
+
+                <div id="no-friends" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500">
+                    <i class="fa-solid fa-address-book text-3xl mb-2 opacity-40"></i>
+                    <p class="text-sm">Henüz kayıtlı arkadaşın yok.</p>
+                    <p class="text-xs text-slate-600 mt-1">Alttaki menüden "Arkadaş Ekle" sekmesine giderek arkadaşını ekleyebilirsin.</p>
+                </div>
+            </div>
+
+            <!-- TAB 2: ADD FRIEND -->
+            <div id="tab-add" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+                    <h3 class="text-sm font-bold text-white mb-1">Yeni Arkadaş Ekle</h3>
+                    <p class="text-xs text-slate-400 mb-4">Arkadaşının sana gönderdiği özel ID kodunu ve ona vermek istediğin ismi aşağıya yaz.</p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">Arkadaşın Adı / Takma Adı</label>
+                            <input type="text" id="friend-name-input" placeholder="Örn: En yakın kanka" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">Arkadaşın Sabit Cihaz ID'si</label>
+                            <input type="text" id="friend-id-input" placeholder="Peer ID yapıştır..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600 font-mono">
+                        </div>
+                        <button onclick="addFriend()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow">
+                            Rehbere Kaydet ve Bağlan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: PROFILE / MY ID -->
+            <div id="tab-profile" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl font-bold mb-3" id="profile-big-avatar">H</div>
+                    <h3 class="text-base font-bold text-white" id="profile-name-display">İsimsiz</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Sabit Cihaz Kimliğin (ID):</p>
+                    
+                    <div class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 mt-3 flex items-center justify-between gap-2">
+                        <span id="my-peer-id-text" class="text-xs font-mono text-emerald-400 truncate select-all">Yükleniyor...</span>
+                        <button onclick="copyMyId()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs shrink-0 transition">
+                            <i class="fa-regular fa-copy mr-1"></i> Kopyala
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-2">Bu ID'yi arkadaşına göndererek seni rehberine eklemesini sağlayabilirsin.</p>
+                </div>
+            </div>
+
+            <!-- ACTIVE CHAT VIEW (Modal/Overlay) -->
+            <div id="chat-window" class="absolute inset-0 bg-slate-950 flex flex-col hidden z-20">
+                <div class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="closeChat()" class="text-slate-400 hover:text-white p-1">
+                            <i class="fa-solid fa-arrow-left text-base"></i>
+                        </button>
+                        <div>
+                            <h3 class="text-sm font-bold text-white" id="active-chat-name">Arkadaş</h3>
+                            <span class="text-[10px] text-slate-400" id="active-chat-status">Bağlanıyor...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="message-container" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
+                    <!-- Messages go here -->
+                </div>
+
+                <div class="bg-slate-900 border-t border-slate-800 p-3 flex items-center gap-2 shrink-0">
+                    <input type="text" id="message-input" placeholder="Mesaj yaz..." onkeypress="handleKeyPress(event)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
+                    <button onclick="sendMessage()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition shrink-0">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="bg-slate-900 border-t border-slate-800 px-6 py-2 flex items-center justify-around shrink-0">
+            <button onclick="switchTab('chats')" id="nav-chats" class="flex flex-col items-center text-emerald-400 transition py-1">
+                <i class="fa-solid fa-comments text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Sohbetler</span>
+            </button>
+            <button onclick="switchTab('add')" id="nav-add" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1">
+                <i class="fa-solid fa-user-plus text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Arkadaş Ekle</span>
+            </button>
+            <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1">
+                <i class="fa-solid fa-user-gear text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Profilim</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <script>
+        let myProfile = JSON.parse(localStorage.getItem('p2p_profile')) || null;
+        let friends = JSON.parse(localStorage.getItem('p2p_friends')) || [];
+        let messages = JSON.parse(localStorage.getItem('p2p_messages')) || {};
+        
+        let peer = null;
+        let activeConn = null;
+        let activePeerId = null;
+
+        window.onload = () => {
+            if (!myProfile) {
+                document.getElementById('setup-screen').classList.remove('hidden');
+            } else {
+                initApp();
+            }
+        };
+
+        function saveProfile() {
+            const name = document.getElementById('username-input').value.trim();
+            if (!name) {
+                alert('Lütfen bir takma ad girin!');
+                return;
+            }
+            // Generate permanent device ID if not exists
+            let deviceId = localStorage.getItem('p2p_device_id');
+            if (!deviceId) {
+                deviceId = 'gizli-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36);
+                localStorage.setItem('p2p_device_id', deviceId);
+            }
+
+            myProfile = { name: name, id: deviceId };
+            localStorage.setItem('p2p_profile', JSON.stringify(myProfile));
+            document.getElementById('setup-screen').classList.add('hidden');
+            initApp();
+        }
+
+        function initApp() {
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('my-display-name').innerText = myProfile.name;
+            document.getElementById('my-avatar').innerText = myProfile.name.charAt(0).toUpperCase();
+            document.getElementById('profile-name-display').innerText = myProfile.name;
+            document.getElementById('profile-big-avatar').innerText = myProfile.name.charAt(0).toUpperCase();
+            document.getElementById('my-peer-id-text').innerText = myProfile.id;
+
+            // Initialize PeerJS with permanent custom ID
+            peer = new Peer(myProfile.id);
+
+            peer.on('open', (id) => {
+                document.getElementById('connection-status').innerText = "Çevrimiçi";
+                document.getElementById('connection-status').className = "text-[10px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800";
+            });
+
+            peer.on('connection', (conn) => {
+                setupConnection(conn);
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                document.getElementById('connection-status').innerText = "Bağlantı Hatası";
+                document.getElementById('connection-status').className = "text-[10px] bg-red-950 text-red-400 px-2.5 py-1 rounded-full border border-red-800";
+            });
+
+            renderFriends();
+        }
+
+        function copyMyId() {
+            navigator.clipboard.writeText(myProfile.id);
+            alert('Cihaz ID\'n kopyalandı! Arkadaşına gönderebilirsin.');
+        }
+
+        function switchTab(tab) {
+            ['chats', 'add', 'profile'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+                document.getElementById('nav-' + t).className = "flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1";
+            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            document.getElementById('nav-' + tab).className = "flex flex-col items-center text-emerald-400 transition py-1";
+        }
+
+        function addFriend() {
+            const name = document.getElementById('friend-name-input').value.trim();
+            const id = document.getElementById('friend-id-input').value.trim();
+
+            if (!name || !id) {
+                alert('Lütfen hem isim hem de arkadaş ID\'sini girin!');
+                return;
+            }
+
+            if (id === myProfile.id) {
+                alert('Kendi ID\'ni ekleyemezsin!');
+                return;
+            }
+
+            if (friends.some(f => f.id === id)) {
+                alert('Bu arkadaş zaten rehberinizde kayıtlı!');
+                return;
+            }
+
+            friends.push({ name: name, id: id });
+            localStorage.setItem('p2p_friends', JSON.stringify(friends));
+
+            document.getElementById('friend-name-input').value = '';
+            document.getElementById('friend-id-input').value = '';
+            
+            renderFriends();
+            switchTab('chats');
+            alert('Arkadaş başarıyla eklendi!');
+        }
+
+        function renderFriends() {
+            const container = document.getElementById('friends-list');
+            const noFriends = document.getElementById('no-friends');
+            container.innerHTML = '';
+
+            document.getElementById('friend-count').innerText = friends.length + ' kayıtlı';
+
+            if (friends.length === 0) {
+                noFriends.classList.remove('hidden');
+                return;
+            }
+
+            noFriends.classList.add('hidden');
+
+            friends.forEach(friend => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between hover:border-slate-700 transition cursor-pointer";
+                div.onclick = () => openChat(friend);
+                
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-sm">
+                            ${friend.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-white">${friend.name}</h4>
+                            <p class="text-[10px] text-slate-500 font-mono truncate max-w-[180px]">${friend.id}</p>
+                        </div>
+                    </div>
+                    <button class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                        Sohbet
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function openChat(friend) {
+            activePeerId = friend.id;
+            document.getElementById('active-chat-name').innerText = friend.name;
+            document.getElementById('active-chat-status').innerText = "Bağlanıyor...";
+            document.getElementById('chat-window').classList.remove('hidden');
+            
+            renderMessages();
+
+            // Connect via PeerJS
+            const conn = peer.connect(friend.id);
+            setupConnection(conn);
+        }
+
+        function closeChat() {
+            document.getElementById('chat-window').classList.add('hidden');
+            activePeerId = null;
+            if (activeConn) {
+                activeConn.close();
+                activeConn = null;
+            }
+        }
+
+        function setupConnection(conn) {
+            activeConn = conn;
+            
+            conn.on('open', () => {
+                if (activePeerId === conn.peer) {
+                    document.getElementById('active-chat-status').innerText = "Çevrimiçi (Bağlı)";
+                    document.getElementById('active-chat-status').className = "text-[10px] text-emerald-400";
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (!messages[conn.peer]) messages[conn.peer] = [];
+                messages[conn.peer].push({ sender: 'them', text: data.text, time: data.time });
+                localStorage.setItem('p2p_messages', JSON.stringify(messages));
+                
+                if (activePeerId === conn.peer) {
+                    renderMessages();
+                }
+            });
+
+            conn.on('close', () => {
+                if (activePeerId === conn.peer) {
+                    document.getElementById('active-chat-status').innerText = "Bağlantı Kesildi";
+                    document.getElementById('active-chat-status').className = "text-[10px] text-red-400";
+                }
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !activePeerId) return;
+
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            if (!messages[activePeerId]) messages[activePeerId] = [];
+            messages[activePeerId].push({ sender: 'me', text: text, time: time });
+            localStorage.setItem('p2p_messages', JSON.stringify(messages));
+            
+            renderMessages();
+            input.value = '';
+
+            // Send via PeerJS connection
+            if (activeConn && activeConn.open) {
+                activeConn.send({ text: text, time: time });
+            } else {
+                // Try reconnecting
+                activeConn = peer.connect(activePeerId);
+                activeConn.on('open', () => {
+                    activeConn.send({ text: text, time: time });
+                });
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('message-container');
+            container.innerHTML = '';
+
+            if (!activePeerId || !messages[activePeerId]) return;
+
+            messages[activePeerId].forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`;
+                
+                div.innerHTML = `
+                    <div class="max-w-[75%] rounded-2xl px-3.5 py-2 text-xs ${msg.sender === 'me' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
+                        ${msg.text}
+                    </div>
+                    <span class="text-[9px] text-slate-500 mt-0.5 px-1">${msg.time}</span>
+                `;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+</body>
+</html>
