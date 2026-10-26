@@ -12,7 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         body { background-color: #030712; color: #f3f4f6; }
-        .modal-bg { background-color: rgba(3, 7, 18, 0.85); backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="h-[100dvh] flex flex-col overflow-hidden select-none">
@@ -39,10 +38,10 @@
     </div>
 
     <!-- MAIN APP INTERFACE -->
-    <div id="app-screen" class="flex-1 flex flex-col h-full hidden overflow-hidden">
+    <div id="app-screen" class="flex-1 flex flex-col h-full hidden overflow-hidden relative">
         
-        <!-- HEADER -->
-        <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+        <!-- HEADER (Sadece ana ekranda görünür, sohbette gizlenir) -->
+        <header id="main-header" class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 z-10">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold" id="my-avatar">H</div>
                 <div>
@@ -72,9 +71,7 @@
                     <span id="friend-count" class="text-xs text-slate-500">0 kayıtlı</span>
                 </div>
                 
-                <div id="friends-list" class="space-y-2">
-                    <!-- Dynamic Friends Will Render Here -->
-                </div>
+                <div id="friends-list" class="space-y-2"></div>
 
                 <div id="no-friends" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500">
                     <i class="fa-solid fa-address-book text-3xl mb-2 opacity-40"></i>
@@ -128,8 +125,8 @@
                 </div>
             </div>
 
-            <!-- ACTIVE CHAT VIEW -->
-            <div id="chat-window" class="absolute inset-0 bg-slate-950 flex flex-col hidden z-20">
+            <!-- ACTIVE CHAT VIEW (TAM EKRAN SOHBET PENCERESİ) -->
+            <div id="chat-window" class="absolute inset-0 bg-slate-950 flex flex-col hidden z-30">
                 <div class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
                     <div class="flex items-center space-x-3">
                         <button onclick="closeChat()" class="text-slate-400 hover:text-white p-1">
@@ -137,7 +134,6 @@
                         </button>
                         <div>
                             <h3 class="text-sm font-bold text-white" id="active-chat-name">Arkadaş</h3>
-                            <!-- 11: Canlı Çevrim içi/dışı ve Yazıyor Durumu -->
                             <span class="text-[10px] text-emerald-400 transition-all" id="active-chat-status">Yükleniyor...</span>
                         </div>
                     </div>
@@ -153,10 +149,10 @@
                 </div>
 
                 <div id="message-container" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
-                    <!-- Messages go here -->
+                    <!-- Mesajlar buraya dolacak -->
                 </div>
 
-                <!-- 2: FOTOĞRAF / VİDEO YÜKLEME ALANI VE INPUT -->
+                <!-- MEDYA ATMA VE MESAJ GÖNDERME -->
                 <div class="bg-slate-900 border-t border-slate-800 p-3 flex items-center gap-2 shrink-0">
                     <label for="media-input" class="cursor-pointer text-slate-400 hover:text-emerald-400 p-2 rounded-xl bg-slate-950 border border-slate-800">
                         <i class="fa-solid fa-paperclip text-sm"></i>
@@ -173,8 +169,8 @@
 
         </main>
 
-        <!-- BOTTOM NAVIGATION -->
-        <nav class="bg-slate-900 border-t border-slate-800 px-4 py-2.5 flex items-center justify-around shrink-0 z-30">
+        <!-- BOTTOM NAVIGATION (Sohbet açıkken gizlenir) -->
+        <nav id="bottom-nav" class="bg-slate-900 border-t border-slate-800 px-4 py-2.5 flex items-center justify-around shrink-0 z-20">
             <button onclick="switchTab('chats')" id="nav-chats" class="flex flex-col items-center text-emerald-400 transition py-1">
                 <i class="fa-solid fa-comments text-lg"></i>
                 <span class="text-[10px] mt-1 font-medium">Sohbetler</span>
@@ -247,7 +243,7 @@
             document.getElementById('profile-big-avatar').innerText = myProfile.name.charAt(0).toUpperCase();
             document.getElementById('my-peer-id-text').innerText = myProfile.id;
 
-            // 11: CANLI ÇEVRİMİÇİ TAKİBİ DÜZENLEME
+            // Çevrim içi durum entegrasyonu
             const myStatusRef = db.ref('status/' + myProfile.id);
             db.ref('.info/connected').on('value', (snap) => {
                 if (snap.val() === true) {
@@ -347,7 +343,6 @@
             db.ref('requests/' + myProfile.id + '/' + id).remove();
         }
 
-        // 13: MESAJ ÖZETİ VE OKUNMAMIŞ MESAJ SAYACI
         let unreadCounts = {};
         function listenUnreadMessages() {
             friends.forEach(friend => {
@@ -383,7 +378,6 @@
                 div.className = "bg-slate-900 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between hover:border-slate-700 cursor-pointer relative";
                 div.onclick = () => openChat(friend);
                 
-                // 11: Canlı çevrim içi durum simgesi & 13: Okunmamış rozeti
                 div.innerHTML = `
                     <div class="flex items-center space-x-3">
                         <div class="relative">
@@ -404,7 +398,6 @@
                 `;
                 container.appendChild(div);
 
-                // 11: Liste üstünde çevrim içi mi dinle
                 db.ref('status/' + friend.id).on('value', (sSnap) => {
                     const dot = document.getElementById('status-dot-' + friend.id);
                     if (dot) {
@@ -424,7 +417,11 @@
         function openChat(friend) {
             activeFriend = friend;
             activeRoomId = getRoomId(myProfile.id, friend.id);
-            unreadCounts[friend.id] = 0; // Okunmamış sıfırla
+            unreadCounts[friend.id] = 0;
+            
+            // Üst başlığı ve alt menüyü gizle, sohbeti tam ekran aç
+            document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('bottom-nav').classList.add('hidden');
             
             document.getElementById('active-chat-name').innerText = friend.name;
             document.getElementById('chat-window').classList.remove('hidden');
@@ -436,6 +433,10 @@
 
         function closeChat() {
             document.getElementById('chat-window').classList.add('hidden');
+            // Sohbet kapanınca ana başlığı ve alt menüyü geri getir
+            document.getElementById('main-header').classList.remove('hidden');
+            document.getElementById('bottom-nav').classList.remove('hidden');
+
             if (chatListener) db.ref('chats/' + activeRoomId).off();
             db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
             activeFriend = null;
@@ -452,7 +453,6 @@
             }, 2000);
         }
 
-        // 11 & 1: CANLI ÇEVRİMİÇİ VE YAZIYOR DURUMU DİNLEME
         function listenFriendOnlineAndTyping() {
             const statusEl = document.getElementById('active-chat-status');
 
@@ -492,7 +492,6 @@
                         const div = document.createElement('div');
                         div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} group mb-1`;
                         
-                        // 12: MESAJ ATAN KİŞİNİN İSMİ SOHBET İÇİNDE GÖRÜNÜYOR
                         let mediaContent = '';
                         if (msg.mediaType === 'image') {
                             mediaContent = `<img src="${msg.mediaUrl}" class="rounded-lg max-w-full max-h-48 mb-1 object-cover">`;
@@ -501,9 +500,7 @@
                         }
 
                         div.innerHTML = `
-                            <!-- 12: İsim Gösterimi -->
                             <span class="text-[9px] font-bold text-slate-400 mb-0.5 px-1">${isMe ? 'Sen' : activeFriend.name}</span>
-                            
                             <div onclick="${isMe ? `handleMessageAction('${msgId}', '${msg.text || ''}')` : ''}" class="max-w-[80%] rounded-2xl px-3.5 py-2 text-xs relative cursor-pointer ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
                                 ${mediaContent}
                                 ${msg.text ? `<div>${msg.text}</div>` : ''}
@@ -523,12 +520,11 @@
             });
         }
 
-        // 2: FOTOĞRAF VE VİDEO GÖNDERME İŞLEMİ
         function sendMediaMessage(event) {
             const file = event.target.files[0];
             if (!file || !activeRoomId) return;
 
-            if (file.size > 5 * 1024 * 1024) { // Max 5MB sınırı
+            if (file.size > 5 * 1024 * 1024) {
                 alert("Lütfen 5MB'dan küçük bir dosya seçin!");
                 return;
             }
