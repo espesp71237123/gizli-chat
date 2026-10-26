@@ -47,7 +47,7 @@
                 <div>
                     <h2 class="text-sm font-bold text-white" id="my-display-name">İsimsiz</h2>
                     <p class="text-[10px] text-emerald-400 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Bulut Bağlantısı Aktif
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 🔥 24 Saatlik Snapchat Modu Aktif
                     </p>
                 </div>
             </div>
@@ -427,6 +427,9 @@
             document.getElementById('chat-window').classList.remove('hidden');
             document.getElementById('friend-menu').classList.add('hidden');
             
+            // Oda açıldığında 24 saati geçmiş eski mesajları ve medyaları otomatik temizle (Snapchat Modu)
+            cleanOldMessages(activeRoomId);
+
             listenMessages();
             listenFriendOnlineAndTyping();
         }
@@ -442,6 +445,18 @@
             activeFriend = null;
             activeRoomId = null;
             renderFriends();
+        }
+
+        // --- 24 SAATTE BİR MESAJ VE MEDYALARI OTOMATİK SİLME (SNAPCHAT MODU) ---
+        function cleanOldMessages(roomId) {
+            const chatRef = db.ref('chats/' + roomId);
+            const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000); // 24 saatin milisaniye karşılığı
+
+            chatRef.orderByChild('timestamp').endAt(twentyFourHoursAgo).once('value', (snapshot) => {
+                snapshot.forEach((childSnapshot) => {
+                    childSnapshot.ref.remove(); // 24 saati dolduran mesaj veya medya veritabanından silinir
+                });
+            });
         }
 
         function handleTyping() {
@@ -541,7 +556,7 @@
                     mediaType: type,
                     text: '',
                     time: time,
-                    timestamp: Date.now(),
+                    timestamp: Date.now(), // 24 saatlik temizlik için kritik zaman damgası
                     read: false
                 });
             };
@@ -558,7 +573,7 @@
                 senderId: myProfile.id,
                 text: text,
                 time: time,
-                timestamp: Date.now(),
+                timestamp: Date.now(), // 24 saatlik temizlik için kritik zaman damgası
                 read: false
             });
 
