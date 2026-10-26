@@ -100,8 +100,20 @@
 
             <!-- TAB 3: BİLDİRİMLER -->
             <div id="tab-notifications" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
+                <!-- SISTEM DUYURULARI KISMI -->
+                <div id="announcement-section" class="hidden space-y-2">
+                    <h3 class="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-bullhorn"></i> Sistem Duyurusu
+                    </h3>
+                    <div id="announcement-container" class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3.5 space-y-1 shadow-lg">
+                        <p id="announcement-text" class="text-xs text-emerald-100 leading-relaxed font-medium"></p>
+                        <span id="announcement-time" class="text-[9px] text-emerald-400/70 block text-right font-mono"></span>
+                    </div>
+                </div>
+
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Gelen Arkadaşlık İstekleri</h3>
                 <div id="requests-list" class="space-y-2"></div>
+                
                 <div id="no-requests" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500">
                     <i class="fa-regular fa-bell text-3xl mb-2 opacity-40"></i>
                     <p class="text-sm">Yeni bildirim veya istek yok.</p>
@@ -255,6 +267,7 @@
             renderFriends();
             listenRequests();
             listenUnreadMessages();
+            listenAnnouncements();
         }
 
         function toggleFullScreen() {
@@ -295,16 +308,50 @@
             });
         }
 
+        function updateNotifBadge() {
+            const requestsList = document.getElementById('requests-list');
+            const hasRequests = requestsList.children.length > 0;
+            const hasAnnouncement = !document.getElementById('announcement-section').classList.contains('hidden');
+
+            const badge = document.getElementById('notif-badge');
+            if (hasRequests || hasAnnouncement) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function listenAnnouncements() {
+            db.ref('system_announcement').on('value', (snapshot) => {
+                const data = snapshot.val();
+                const section = document.getElementById('announcement-section');
+                const textEl = document.getElementById('announcement-text');
+                const timeEl = document.getElementById('announcement-time');
+                const noReq = document.getElementById('no-requests');
+
+                if (data && data.text) {
+                    textEl.innerText = data.text;
+                    if (data.timestamp) {
+                        const timeStr = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        timeEl.innerText = timeStr;
+                    }
+                    section.classList.remove('hidden');
+                    noReq.classList.add('hidden');
+                } else {
+                    section.classList.add('hidden');
+                }
+                updateNotifBadge();
+            });
+        }
+
         function listenRequests() {
             db.ref('requests/' + myProfile.id).on('value', (snapshot) => {
                 const requests = snapshot.val();
                 const container = document.getElementById('requests-list');
                 const noReq = document.getElementById('no-requests');
-                const badge = document.getElementById('notif-badge');
                 
                 container.innerHTML = '';
                 if (requests && Object.keys(requests).length > 0) {
-                    badge.classList.remove('hidden');
                     noReq.classList.add('hidden');
 
                     Object.values(requests).forEach(req => {
@@ -323,9 +370,12 @@
                         container.appendChild(div);
                     });
                 } else {
-                    badge.classList.add('hidden');
-                    noReq.classList.remove('hidden');
+                    const hasAnnouncement = !document.getElementById('announcement-section').classList.contains('hidden');
+                    if (!hasAnnouncement) {
+                        noReq.classList.remove('hidden');
+                    }
                 }
+                updateNotifBadge();
             });
         }
 
