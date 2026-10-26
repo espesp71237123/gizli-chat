@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         body { background-color: #030712; color: #f3f4f6; }
+        .modal-bg { background-color: rgba(3, 7, 18, 0.85); backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="h-[100dvh] flex flex-col overflow-hidden select-none">
@@ -51,8 +52,14 @@
                     </p>
                 </div>
             </div>
-            <div id="connection-status" class="text-[10px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800">
-                Çevrimiçi
+            <div class="flex items-center gap-2">
+                <!-- 10: TAM EKRAN BUTONU -->
+                <button onclick="toggleFullScreen()" class="text-slate-400 hover:text-white text-xs bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+                <div id="connection-status" class="text-[10px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-800">
+                    Çevrimiçi
+                </div>
             </div>
         </header>
 
@@ -73,33 +80,41 @@
                 <div id="no-friends" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500">
                     <i class="fa-solid fa-address-book text-3xl mb-2 opacity-40"></i>
                     <p class="text-sm">Henüz kayıtlı arkadaşın yok.</p>
-                    <p class="text-xs text-slate-600 mt-1">Alttaki menüden "Arkadaş Ekle" sekmesine giderek arkadaşını ekleyebilirsin.</p>
+                    <p class="text-xs text-slate-600 mt-1">Alttaki menüden "İstek At" sekmesine giderek arkadaşına istek gönderebilirsin.</p>
                 </div>
             </div>
 
-            <!-- TAB 2: ADD FRIEND -->
+            <!-- TAB 2: ADD FRIEND (6: İstek Atma) -->
             <div id="tab-add" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
-                    <h3 class="text-sm font-bold text-white mb-1">Yeni Arkadaş Ekle</h3>
-                    <p class="text-xs text-slate-400 mb-4">Arkadaşının özel kopyalanan ID kodunu ve ona vermek istediğin ismi aşağıya yaz.</p>
+                    <h3 class="text-sm font-bold text-white mb-1">Arkadaşlık İsteği Gönder</h3>
+                    <p class="text-xs text-slate-400 mb-4">Eklemek istediğin kişinin özel ID kodunu aşağıya yazarak istek gönder.</p>
                     
                     <div class="space-y-3">
-                        <div>
-                            <label class="block text-[11px] font-medium text-slate-300 mb-1">Arkadaşın Adı / Takma Adı</label>
-                            <input type="text" id="friend-name-input" placeholder="Örn: En yakın kanka" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
-                        </div>
                         <div>
                             <label class="block text-[11px] font-medium text-slate-300 mb-1">Arkadaşın Özel ID'si</label>
                             <input type="text" id="friend-id-input" placeholder="ID yapıştır..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600 font-mono">
                         </div>
-                        <button onclick="addFriend()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow">
-                            Rehbere Kaydet
+                        <button onclick="sendFriendRequest()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow">
+                            İstek Gönder
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 3: PROFILE / MY ID -->
+            <!-- TAB 3: BİLDİRİMLER / İSTEKLER (4: Bildirim Kutusu) -->
+            <div id="tab-notifications" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Gelen Arkadaşlık İstekleri</h3>
+                <div id="requests-list" class="space-y-2">
+                    <!-- İstekler buraya dinamik gelecek -->
+                </div>
+                <div id="no-requests" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500">
+                    <i class="fa-regular fa-bell text-3xl mb-2 opacity-40"></i>
+                    <p class="text-sm">Yeni bildirim veya istek yok.</p>
+                </div>
+            </div>
+
+            <!-- TAB 4: PROFILE / MY ID -->
             <div id="tab-profile" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
                     <div class="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl font-bold mb-3" id="profile-big-avatar">H</div>
@@ -112,11 +127,11 @@
                             <i class="fa-regular fa-copy mr-1"></i> Kopyala
                         </button>
                     </div>
-                    <p class="text-[10px] text-slate-500 mt-2">Bu ID'yi arkadaşına göndererek seni rehberine eklemesini sağlayabilirsin.</p>
+                    <p class="text-[10px] text-slate-500 mt-2">Bu ID'yi arkadaşına göndererek sana istek atmasını sağlayabilirsin.</p>
                 </div>
             </div>
 
-            <!-- ACTIVE CHAT VIEW (Modal/Overlay) -->
+            <!-- ACTIVE CHAT VIEW -->
             <div id="chat-window" class="absolute inset-0 bg-slate-950 flex flex-col hidden z-20">
                 <div class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
                     <div class="flex items-center space-x-3">
@@ -125,9 +140,21 @@
                         </button>
                         <div>
                             <h3 class="text-sm font-bold text-white" id="active-chat-name">Arkadaş</h3>
-                            <span class="text-[10px] text-emerald-400" id="active-chat-status">Bulut Odası Aktif</span>
+                            <!-- 1: Yazıyor Bilgisi göstergesi -->
+                            <span class="text-[10px] text-emerald-400 transition-all" id="active-chat-status">Çevrimiçi</span>
                         </div>
                     </div>
+                    <!-- 9: Seçenekler Menüsü (Engelle, Sil, İsim Değiştir) -->
+                    <button onclick="toggleFriendMenu()" class="text-slate-400 hover:text-white px-2 py-1">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                </div>
+
+                <!-- 9: Arkadaş Ayarları Menüsü (Modal) -->
+                <div id="friend-menu" class="hidden bg-slate-900 border-b border-slate-800 p-3 flex justify-around text-xs shrink-0">
+                    <button onclick="renameFriend()" class="text-slate-300 hover:text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-pen"></i> İsim Değiştir</button>
+                    <button onclick="blockFriend()" class="text-amber-400 hover:text-amber-300 flex items-center gap-1"><i class="fa-solid fa-ban"></i> Engelle</button>
+                    <button onclick="deleteFriend()" class="text-rose-400 hover:text-rose-300 flex items-center gap-1"><i class="fa-solid fa-trash"></i> Sil</button>
                 </div>
 
                 <div id="message-container" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
@@ -135,7 +162,7 @@
                 </div>
 
                 <div class="bg-slate-900 border-t border-slate-800 p-3 flex items-center gap-2 shrink-0">
-                    <input type="text" id="message-input" placeholder="Mesaj yaz..." onkeypress="handleKeyPress(event)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
+                    <input type="text" id="message-input" placeholder="Mesaj yaz..." oninput="handleTyping()" onkeypress="handleKeyPress(event)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600">
                     <button onclick="sendMessage()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition shrink-0">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
@@ -145,14 +172,19 @@
         </main>
 
         <!-- BOTTOM NAVIGATION -->
-        <nav class="bg-slate-900 border-t border-slate-800 px-6 py-2.5 flex items-center justify-around shrink-0 z-30">
+        <nav class="bg-slate-900 border-t border-slate-800 px-4 py-2.5 flex items-center justify-around shrink-0 z-30">
             <button onclick="switchTab('chats')" id="nav-chats" class="flex flex-col items-center text-emerald-400 transition py-1">
                 <i class="fa-solid fa-comments text-lg"></i>
                 <span class="text-[10px] mt-1 font-medium">Sohbetler</span>
             </button>
             <button onclick="switchTab('add')" id="nav-add" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1">
                 <i class="fa-solid fa-user-plus text-lg"></i>
-                <span class="text-[10px] mt-1 font-medium">Arkadaş Ekle</span>
+                <span class="text-[10px] mt-1 font-medium">İstek At</span>
+            </button>
+            <button onclick="switchTab('notifications')" id="nav-notifications" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1 relative">
+                <i class="fa-solid fa-bell text-lg"></i>
+                <span id="notif-badge" class="hidden absolute top-1 right-3 w-2 h-2 bg-emerald-500 rounded-full"></span>
+                <span class="text-[10px] mt-1 font-medium">Bildirimler</span>
             </button>
             <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1">
                 <i class="fa-solid fa-user-gear text-lg"></i>
@@ -173,17 +205,16 @@
             appId: "1:911198049657:web:9873ecd9a6b35dbb0dcba8"
         };
         
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch(e) {}
-        
+        try { firebase.initializeApp(firebaseConfig); } catch(e) {}
         const db = firebase.database();
 
         let myProfile = JSON.parse(localStorage.getItem('p2p_profile')) || null;
         let friends = JSON.parse(localStorage.getItem('p2p_friends')) || [];
+        let blockedUsers = JSON.parse(localStorage.getItem('p2p_blocked')) || [];
         let activeFriend = null;
         let activeRoomId = null;
         let chatListener = null;
+        let typingTimeout = null;
 
         window.onload = () => {
             if (!myProfile) {
@@ -195,15 +226,10 @@
 
         function saveProfile() {
             const name = document.getElementById('username-input').value.trim();
-            if (!name) {
-                alert('Lütfen bir takma ad girin!');
-                return;
-            }
-            let deviceId = localStorage.getItem('p2p_device_id');
-            if (!deviceId) {
-                deviceId = 'user_' + Math.random().toString(36).substring(2, 9);
-                localStorage.setItem('p2p_device_id', deviceId);
-            }
+            if (!name) return alert('Lütfen bir takma ad girin!');
+            
+            let deviceId = localStorage.getItem('p2p_device_id') || 'user_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('p2p_device_id', deviceId);
 
             myProfile = { name: name, id: deviceId };
             localStorage.setItem('p2p_profile', JSON.stringify(myProfile));
@@ -219,16 +245,29 @@
             document.getElementById('profile-big-avatar').innerText = myProfile.name.charAt(0).toUpperCase();
             document.getElementById('my-peer-id-text').innerText = myProfile.id;
 
+            // Kullanıcıyı veritabanına kaydet
+            db.ref('users/' + myProfile.id).set({ name: myProfile.name, id: myProfile.id });
+
             renderFriends();
+            listenRequests();
+        }
+
+        // 10: TAM EKRAN MODU
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => alert("Tam ekran desteklenmiyor."));
+            } else {
+                document.exitFullscreen();
+            }
         }
 
         function copyMyId() {
             navigator.clipboard.writeText(myProfile.id);
-            alert('Cihaz ID\'n kopyalandı! Arkadaşına gönderebilirsin.');
+            alert('Cihaz ID\'n kopyalandı!');
         }
 
         function switchTab(tab) {
-            ['chats', 'add', 'profile'].forEach(t => {
+            ['chats', 'add', 'notifications', 'profile'].forEach(t => {
                 document.getElementById('tab-' + t).classList.add('hidden');
                 document.getElementById('nav-' + t).className = "flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1";
             });
@@ -236,34 +275,70 @@
             document.getElementById('nav-' + tab).className = "flex flex-col items-center text-emerald-400 transition py-1";
         }
 
-        function addFriend() {
-            const name = document.getElementById('friend-name-input').value.trim();
-            const id = document.getElementById('friend-id-input').value.trim();
+        // 6: TEK TARAFLI İSTEK GÖNDERME
+        function sendFriendRequest() {
+            const friendId = document.getElementById('friend-id-input').value.trim();
+            if (!friendId) return alert('Lütfen arkadaşınızın ID\'sini girin!');
+            if (friendId === myProfile.id) return alert('Kendi ID\'nize istek atamazsınız!');
 
-            if (!name || !id) {
-                alert('Lütfen hem isim hem de arkadaş ID\'sini girin!');
-                return;
+            db.ref('requests/' + friendId + '/' + myProfile.id).set({
+                fromId: myProfile.id,
+                fromName: myProfile.name,
+                timestamp: Date.now()
+            }).then(() => {
+                alert('İstek başarıyla gönderildi!');
+                document.getElementById('friend-id-input').value = '';
+                switchTab('chats');
+            });
+        }
+
+        // 4: BİLDİRİM VE İSTEKLERİ DİNLEME
+        function listenRequests() {
+            db.ref('requests/' + myProfile.id).on('value', (snapshot) => {
+                const requests = snapshot.val();
+                const container = document.getElementById('requests-list');
+                const noReq = document.getElementById('no-requests');
+                const badge = document.getElementById('notif-badge');
+                
+                container.innerHTML = '';
+                if (requests && Object.keys(requests).length > 0) {
+                    badge.classList.remove('hidden');
+                    noReq.classList.add('hidden');
+
+                    Object.values(requests).forEach(req => {
+                        const div = document.createElement('div');
+                        div.className = "bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between";
+                        div.innerHTML = `
+                            <div>
+                                <h4 class="text-xs font-bold text-white">${req.fromName}</h4>
+                                <p class="text-[10px] text-slate-500 font-mono">${req.fromId}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="acceptRequest('${req.fromId}', '${req.fromName}')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs">Kabul Et</button>
+                                <button onclick="rejectRequest('${req.fromId}')" class="bg-rose-600/20 text-rose-400 px-3 py-1 rounded-lg text-xs">Reddet</button>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    badge.classList.add('hidden');
+                    noReq.classList.remove('hidden');
+                }
+            });
+        }
+
+        function acceptRequest(id, name) {
+            if (!friends.some(f => f.id === id)) {
+                friends.push({ id: id, name: name });
+                localStorage.setItem('p2p_friends', JSON.stringify(friends));
             }
-
-            if (id === myProfile.id) {
-                alert('Kendi ID\'ni ekleyemezsin!');
-                return;
-            }
-
-            if (friends.some(f => f.id === id)) {
-                alert('Bu arkadaş zaten rehberinizde kayıtlı!');
-                return;
-            }
-
-            friends.push({ name: name, id: id });
-            localStorage.setItem('p2p_friends', JSON.stringify(friends));
-
-            document.getElementById('friend-name-input').value = '';
-            document.getElementById('friend-id-input').value = '';
-            
+            db.ref('requests/' + myProfile.id + '/' + id).remove();
             renderFriends();
-            switchTab('chats');
-            alert('Arkadaş başarıyla eklendi!');
+            alert(`${name} arkadaş olarak eklendi!`);
+        }
+
+        function rejectRequest(id) {
+            db.ref('requests/' + myProfile.id + '/' + id).remove();
         }
 
         function renderFriends() {
@@ -272,17 +347,13 @@
             container.innerHTML = '';
 
             document.getElementById('friend-count').innerText = friends.length + ' kayıtlı';
-
-            if (friends.length === 0) {
-                noFriends.classList.remove('hidden');
-                return;
-            }
-
+            if (friends.length === 0) return noFriends.classList.remove('hidden');
             noFriends.classList.add('hidden');
 
             friends.forEach(friend => {
+                if (blockedUsers.includes(friend.id)) return; // Engelleneni gizle
                 const div = document.createElement('div');
-                div.className = "bg-slate-900 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between hover:border-slate-700 transition cursor-pointer";
+                div.className = "bg-slate-900 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between hover:border-slate-700 cursor-pointer";
                 div.onclick = () => openChat(friend);
                 
                 div.innerHTML = `
@@ -295,17 +366,13 @@
                             <p class="text-[10px] text-slate-500 font-mono truncate max-w-[180px]">${friend.id}</p>
                         </div>
                     </div>
-                    <button class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                        Sohbet
-                    </button>
+                    <button class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">Sohbet</button>
                 `;
                 container.appendChild(div);
             });
         }
 
-        function getRoomId(id1, id2) {
-            return [id1, id2].sort().join('_');
-        }
+        function getRoomId(id1, id2) { return [id1, id2].sort().join('_'); }
 
         function openChat(friend) {
             activeFriend = friend;
@@ -313,41 +380,71 @@
             
             document.getElementById('active-chat-name').innerText = friend.name;
             document.getElementById('chat-window').classList.remove('hidden');
+            document.getElementById('friend-menu').classList.add('hidden');
             
             listenMessages();
+            listenTypingStatus();
         }
 
         function closeChat() {
             document.getElementById('chat-window').classList.add('hidden');
-            if (chatListener) {
-                db.ref('chats/' + activeRoomId).off('value', chatListener);
-            }
+            if (chatListener) db.ref('chats/' + activeRoomId).off();
+            db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
             activeFriend = null;
             activeRoomId = null;
         }
 
+        // 1: YAZIYOR VE GÖRÜLDÜ BİLGİSİ
+        function handleTyping() {
+            if (!activeRoomId) return;
+            db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(true);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
+            }, 2000);
+        }
+
+        function listenTypingStatus() {
+            db.ref('typing/' + activeRoomId + '/' + activeFriend.id).on('value', (snapshot) => {
+                const statusEl = document.getElementById('active-chat-status');
+                if (snapshot.val() === true) {
+                    statusEl.innerText = "Yazıyor...";
+                    statusEl.className = "text-[10px] text-amber-400 font-bold animate-pulse";
+                } else {
+                    statusEl.innerText = "Çevrimiçi";
+                    statusEl.className = "text-[10px] text-emerald-400";
+                }
+            });
+        }
+
         function listenMessages() {
             const container = document.getElementById('message-container');
-            container.innerHTML = '<div class="text-center text-xs text-slate-600 py-4">Mesajlar yükleniyor...</div>';
-
-            if (chatListener) {
-                db.ref('chats/' + activeRoomId).off();
-            }
+            if (chatListener) db.ref('chats/' + activeRoomId).off();
 
             chatListener = db.ref('chats/' + activeRoomId).on('value', (snapshot) => {
                 container.innerHTML = '';
                 const data = snapshot.val();
                 if (data) {
-                    Object.values(data).forEach(msg => {
+                    Object.entries(data).forEach(([msgId, msg]) => {
+                        // 1: Mesaj açıldığında görüldü yap
+                        if (msg.senderId !== myProfile.id && !msg.read) {
+                            db.ref('chats/' + activeRoomId + '/' + msgId + '/read').set(true);
+                        }
+
                         const isMe = msg.senderId === myProfile.id;
                         const div = document.createElement('div');
-                        div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+                        div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} group`;
                         
+                        // 5: Mesaj Düzenleme & Silme Etkileşimi
                         div.innerHTML = `
-                            <div class="max-w-[75%] rounded-2xl px-3.5 py-2 text-xs ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
+                            <div onclick="${isMe ? `handleMessageAction('${msgId}', '${msg.text}')` : ''}" class="max-w-[75%] rounded-2xl px-3.5 py-2 text-xs relative cursor-pointer ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
                                 ${msg.text}
+                                ${msg.edited ? '<span class="text-[8px] opacity-60 ml-1">(düzenlendi)</span>' : ''}
                             </div>
-                            <span class="text-[9px] text-slate-500 mt-0.5 px-1">${msg.time}</span>
+                            <div class="flex items-center gap-1 text-[9px] text-slate-500 mt-0.5 px-1">
+                                <span>${msg.time}</span>
+                                ${isMe ? `<i class="fa-solid fa-check-double ${msg.read ? 'text-emerald-400' : 'text-slate-600'}"></i>` : ''}
+                            </div>
                         `;
                         container.appendChild(div);
                     });
@@ -364,16 +461,66 @@
             if (!text || !activeRoomId) return;
 
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const newMsgRef = db.ref('chats/' + activeRoomId).push();
-            newMsgRef.set({
+            db.ref('chats/' + activeRoomId).push().set({
                 senderId: myProfile.id,
                 text: text,
                 time: time,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                read: false
             });
 
+            db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
             input.value = '';
+        }
+
+        // 5: MESAJ DÜZENLEME VE SİLME
+        function handleMessageAction(msgId, currentText) {
+            const action = prompt("Mesajı ne yapmak istersin?\n1: Düzenle\n2: Sil\n(İptal için boş bırak)", "1");
+            if (action === "1") {
+                const newText = prompt("Yeni mesajı girin:", currentText);
+                if (newText && newText !== currentText) {
+                    db.ref('chats/' + activeRoomId + '/' + msgId).update({ text: newText, edited: true });
+                }
+            } else if (action === "2") {
+                if (confirm("Mesajı silmek istediğine emin misin?")) {
+                    db.ref('chats/' + activeRoomId + '/' + msgId).remove();
+                }
+            }
+        }
+
+        // 9: ARKADAŞ MENÜSÜ, İSİM DÜZENLEME, ENGELLEME & SİLME
+        function toggleFriendMenu() {
+            document.getElementById('friend-menu').classList.toggle('hidden');
+        }
+
+        function renameFriend() {
+            const newName = prompt("Arkadaşın için yeni bir takma ad girin:", activeFriend.name);
+            if (newName) {
+                activeFriend.name = newName;
+                const idx = friends.findIndex(f => f.id === activeFriend.id);
+                if (idx !== -1) friends[idx].name = newName;
+                localStorage.setItem('p2p_friends', JSON.stringify(friends));
+                document.getElementById('active-chat-name').innerText = newName;
+                renderFriends();
+            }
+        }
+
+        function blockFriend() {
+            if (confirm(`${activeFriend.name} kullanıcısını engellemek istediğine emin misin?`)) {
+                blockedUsers.push(activeFriend.id);
+                localStorage.setItem('p2p_blocked', JSON.stringify(blockedUsers));
+                closeChat();
+                renderFriends();
+            }
+        }
+
+        function deleteFriend() {
+            if (confirm(`${activeFriend.name} arkadaşını listeden silmek istiyor musun?`)) {
+                friends = friends.filter(f => f.id !== activeFriend.id);
+                localStorage.setItem('p2p_friends', JSON.stringify(friends));
+                closeChat();
+                renderFriends();
+            }
         }
 
         function handleKeyPress(e) {
