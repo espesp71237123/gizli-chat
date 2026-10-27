@@ -268,6 +268,7 @@
             listenRequests();
             listenUnreadMessages();
             listenAnnouncements();
+            listenAcceptedRequests(); // EKLENDİ: Karşı tarafın kabul sinyallerini dinler
         }
 
         function toggleFullScreen() {
@@ -384,9 +385,32 @@
                 friends.push({ id: id, name: name });
                 localStorage.setItem('p2p_friends', JSON.stringify(friends));
             }
+
+            // GÜNCELLENDİ: İsteği atana "kabul edildi" sinyali gönder
+            db.ref('accepted/' + id).set({
+                id: myProfile.id,
+                name: myProfile.name
+            });
+
             db.ref('requests/' + myProfile.id + '/' + id).remove();
             renderFriends();
             alert(`${name} arkadaş olarak eklendi!`);
+        }
+
+        // EKLENDİ: Karşı taraf kabul ettiğinde tetiklenen fonksiyon
+        function listenAcceptedRequests() {
+            db.ref('accepted/' + myProfile.id).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (!friends.some(f => f.id === data.id)) {
+                        friends.push({ id: data.id, name: data.name });
+                        localStorage.setItem('p2p_friends', JSON.stringify(friends));
+                        renderFriends();
+                        alert(`${data.name} arkadaşlık isteğini kabul etti! 🎉`);
+                    }
+                    db.ref('accepted/' + myProfile.id).remove();
+                }
+            });
         }
 
         function rejectRequest(id) {
@@ -469,7 +493,6 @@
             activeRoomId = getRoomId(myProfile.id, friend.id);
             unreadCounts[friend.id] = 0;
             
-            // Üst başlığı ve alt menüyü gizle, sohbeti tam ekran aç
             document.getElementById('main-header').classList.add('hidden');
             document.getElementById('bottom-nav').classList.add('hidden');
             
@@ -477,7 +500,6 @@
             document.getElementById('chat-window').classList.remove('hidden');
             document.getElementById('friend-menu').classList.add('hidden');
             
-            // Oda açıldığında 24 saati geçmiş eski mesajları ve medyaları otomatik temizle (Snapchat Modu)
             cleanOldMessages(activeRoomId);
 
             listenMessages();
@@ -486,7 +508,6 @@
 
         function closeChat() {
             document.getElementById('chat-window').classList.add('hidden');
-            // Sohbet kapanınca ana başlığı ve alt menüyü geri getir
             document.getElementById('main-header').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
 
@@ -497,14 +518,13 @@
             renderFriends();
         }
 
-        // --- 24 SAATTE BİR MESAJ VE MEDYALARI OTOMATİK SİLME (SNAPCHAT MODU) ---
         function cleanOldMessages(roomId) {
             const chatRef = db.ref('chats/' + roomId);
-            const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000); // 24 saatin milisaniye karşılığı
+            const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
 
             chatRef.orderByChild('timestamp').endAt(twentyFourHoursAgo).once('value', (snapshot) => {
                 snapshot.forEach((childSnapshot) => {
-                    childSnapshot.ref.remove(); // 24 saati dolduran mesaj veya medya veritabanından silinir
+                    childSnapshot.ref.remove();
                 });
             });
         }
@@ -606,7 +626,7 @@
                     mediaType: type,
                     text: '',
                     time: time,
-                    timestamp: Date.now(), // 24 saatlik temizlik için kritik zaman damgası
+                    timestamp: Date.now(),
                     read: false
                 });
             };
@@ -623,7 +643,7 @@
                 senderId: myProfile.id,
                 text: text,
                 time: time,
-                timestamp: Date.now(), // 24 saatlik temizlik için kritik zaman damgası
+                timestamp: Date.now(),
                 read: false
             });
 
@@ -685,3 +705,4 @@
     </script>
 </body>
 </html>
+
