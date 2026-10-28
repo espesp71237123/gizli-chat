@@ -7,6 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- PWA MANIFEST & META TAGS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#030712">
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Gizli Bulut Sohbet","short_name":"Gizli Sohbet","start_url":".","display":"standalone","background_color":"%23030712","theme_color":"%23030712","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/3081/3081559.png","sizes":"512x512","type":"image/png"}]}'>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -120,7 +126,7 @@
                 </div>
             </div>
 
-            <!-- TAB 4: PROFILE / MY ID -->
+            <!-- TAB 4: PROFILE / MY ID & PWA INSTALL -->
             <div id="tab-profile" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
                     <div class="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl font-bold mb-3" id="profile-big-avatar">H</div>
@@ -134,6 +140,18 @@
                         </button>
                     </div>
                     <p class="text-[10px] text-slate-500 mt-2">Bu ID'yi arkadaşına göndererek sana istek atmasını sağlayabilirsin.</p>
+                </div>
+
+                <!-- UYGULAMAYI YÜKLE BUTONU (PWA) -->
+                <div id="install-container" class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center hidden">
+                    <div class="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 text-lg mb-2 border border-emerald-500/20">
+                        <i class="fa-solid fa-download"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-white mb-1">Uygulamayı Telefona Kur</h4>
+                    <p class="text-[11px] text-slate-400 mb-3">Tarayıcı çubuklarından kurtul, uygulamayı tam ekran ana ekranına ekle!</p>
+                    <button onclick="installPWA()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition text-xs shadow-lg shadow-emerald-950 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-mobile-screen-button"></i> Ana Ekrana Ekle
+                    </button>
                 </div>
             </div>
 
@@ -225,6 +243,30 @@
         let activeRoomId = null;
         let chatListener = null;
         let typingTimeout = null;
+        let deferredPrompt = null;
+
+        // PWA Install Prompt Listener
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installContainer = document.getElementById('install-container');
+            if (installContainer) {
+                installContainer.classList.remove('hidden');
+            }
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Kullanıcı PWA kurulumunu onayladı.');
+                    }
+                    deferredPrompt = null;
+                    document.getElementById('install-container').classList.add('hidden');
+                });
+            }
+        }
 
         window.onload = () => {
             if (!myProfile) {
@@ -268,7 +310,7 @@
             listenRequests();
             listenUnreadMessages();
             listenAnnouncements();
-            listenAcceptedRequests(); // EKLENDİ: Karşı tarafın kabul sinyallerini dinler
+            listenAcceptedRequests();
         }
 
         function toggleFullScreen() {
@@ -386,7 +428,6 @@
                 localStorage.setItem('p2p_friends', JSON.stringify(friends));
             }
 
-            // GÜNCELLENDİ: İsteği atana "kabul edildi" sinyali gönder
             db.ref('accepted/' + id).set({
                 id: myProfile.id,
                 name: myProfile.name
@@ -397,7 +438,6 @@
             alert(`${name} arkadaş olarak eklendi!`);
         }
 
-        // EKLENDİ: Karşı taraf kabul ettiğinde tetiklenen fonksiyon
         function listenAcceptedRequests() {
             db.ref('accepted/' + myProfile.id).on('value', (snapshot) => {
                 const data = snapshot.val();
@@ -651,11 +691,11 @@
             input.value = '';
         }
 
-        function handleMessageAction(msgId, currentText) {
+        function handleMessageAction(msgId, currentTest) {
             const action = prompt("Mesajı ne yapmak istersin?\n1: Düzenle\n2: Sil\n(İptal için boş bırak)", "1");
             if (action === "1") {
-                const newText = prompt("Yeni mesajı girin:", currentText);
-                if (newText && newText !== currentText) {
+                const newText = prompt("Yeni mesajı girin:", currentTest);
+                if (newText && newText !== currentTest) {
                     db.ref('chats/' + activeRoomId + '/' + msgId).update({ text: newText, edited: true });
                 }
             } else if (action === "2") {
@@ -705,4 +745,5 @@
     </script>
 </body>
 </html>
+
 
