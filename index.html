@@ -126,7 +126,7 @@
                 </div>
             </div>
 
-            <!-- TAB 4: PROFILE / MY ID & PWA INSTALL & NOTIFICATIONS -->
+            <!-- TAB 4: PROFILE / MY ID & PWA INSTALL -->
             <div id="tab-profile" class="absolute inset-0 flex flex-col p-4 overflow-y-auto hidden space-y-4 pb-20">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
                     <div class="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl font-bold mb-3" id="profile-big-avatar">H</div>
@@ -140,18 +140,6 @@
                         </button>
                     </div>
                     <p class="text-[10px] text-slate-500 mt-2">Bu ID'yi arkadaşına göndererek sana istek atmasını sağlayabilirsin.</p>
-                </div>
-
-                <!-- BİLDİRİMLERİ AÇ BUTONU -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
-                    <div class="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 text-lg mb-2 border border-emerald-500/20">
-                        <i class="fa-solid fa-bell"></i>
-                    </div>
-                    <h4 class="text-sm font-bold text-white mb-1">Anlık Bildirimler</h4>
-                    <p class="text-[11px] text-slate-400 mb-3">Arka plandayken mesaj aldığında bildirim almak için izni aktif et.</p>
-                    <button onclick="requestNotificationPermission()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-700 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-bell-slash"></i> Bildirim İznini Etkinleştir
-                    </button>
                 </div>
 
                 <!-- UYGULAMAYI YÜKLE BUTONU (PWA) -->
@@ -323,7 +311,6 @@
             listenUnreadMessages();
             listenAnnouncements();
             listenAcceptedRequests();
-            setupBackgroundNotifications();
         }
 
         function toggleFullScreen() {
@@ -336,139 +323,102 @@
 
         function copyMyId() {
             navigator.clipboard.writeText(myProfile.id);
-            alert("ID Kopyalandı!");
+            alert('Cihaz ID\'n kopyalandı!');
         }
 
-        function requestNotificationPermission() {
-            if (!("Notification" in window)) {
-                alert("Bu tarayıcı bildirimleri desteklemiyor.");
-                return;
-            }
-
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    alert("Bildirimler başarıyla açıldı!");
-                    new Notification("Gizli Sohbet", { body: "Bildirimler aktif edildi!" });
-                } else {
-                    alert("Bildirim izni reddedildi.");
-                }
-            });
-        }
-
-        function setupBackgroundNotifications() {
-            // Arkadaşlarınla olan odaları dinleyip yeni mesaj gelince bildirim fırlatır
-            friends.forEach(friend => {
-                const roomId = [myProfile.id, friend.id].sort().join('_');
-                db.ref('chats/' + roomId).on('child_added', (snapshot) => {
-                    const msg = snapshot.val();
-                    // Eğer mesaj benden değilse ve sohbet penceresi açık değilse veya sekme arka plandaysa bildirim at
-                    if (msg && msg.senderId !== myProfile.id) {
-                        const isChatClosed = document.getElementById('chat-window').classList.contains('hidden');
-                        if (isChatClosed || document.hidden) {
-                            if (Notification.permission === "granted") {
-                                new Notification(friend.name || "Yeni Mesaj", {
-                                    body: msg.text || "📷 Medya gönderildi",
-                                    icon: "https://cdn-icons-png.flaticon.com/512/3081/3081559.png"
-                                });
-                            }
-                        }
-                    }
-                });
-            });
-        }
-
-        function switchTab(tabName) {
+        function switchTab(tab) {
             ['chats', 'add', 'notifications', 'profile'].forEach(t => {
                 document.getElementById('tab-' + t).classList.add('hidden');
                 document.getElementById('nav-' + t).className = "flex flex-col items-center text-slate-400 hover:text-slate-200 transition py-1";
             });
-            document.getElementById('tab-' + tabName).classList.remove('hidden');
-            document.getElementById('nav-' + tabName).className = "flex flex-col items-center text-emerald-400 transition py-1";
-        }
-
-        // --- DİĞER TEMEL UYGULAMA FONKSİYONLARI ---
-        function renderFriends() {
-            const list = document.getElementById('friends-list');
-            const noFriends = document.getElementById('no-friends');
-            list.innerHTML = '';
-            document.getElementById('friend-count').innerText = friends.length + ' kayıtlı';
-
-            if (friends.length === 0) {
-                noFriends.classList.remove('hidden');
-                return;
-            }
-            noFriends.classList.add('hidden');
-
-            friends.forEach(f => {
-                const div = document.createElement('div');
-                div.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:border-slate-700 transition";
-                div.onclick = () => openChat(f);
-                div.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-sm">
-                            ${f.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-white">${f.name}</h4>
-                            <p class="text-[10px] text-slate-400 font-mono truncate w-32" id="last-msg-${f.id}">Sohbet başlat</p>
-                        </div>
-                    </div>
-                    <div id="badge-${f.id}" class="hidden w-2 h-2 bg-emerald-500 rounded-full"></div>
-                `;
-                list.appendChild(div);
-            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            document.getElementById('nav-' + tab).className = "flex flex-col items-center text-emerald-400 transition py-1";
         }
 
         function sendFriendRequest() {
-            const targetId = document.getElementById('friend-id-input').value.trim();
-            if (!targetId) return alert("Lütfen bir ID girin!");
-            if (targetId === myProfile.id) return alert("Kendine istek atamazsın!");
+            const friendId = document.getElementById('friend-id-input').value.trim();
+            if (!friendId) return alert('Lütfen arkadaşınızın ID\'sini girin!');
+            if (friendId === myProfile.id) return alert('Kendi ID\'nize istek atamazsınız!');
 
-            db.ref('requests/' + targetId + '/' + myProfile.id).set({
+            db.ref('requests/' + friendId + '/' + myProfile.id).set({
                 fromId: myProfile.id,
                 fromName: myProfile.name,
                 timestamp: Date.now()
             }).then(() => {
-                alert("Arkadaşlık isteği başarıyla gönderildi!");
+                alert('İstek başarıyla gönderildi!');
                 document.getElementById('friend-id-input').value = '';
-            }).catch(err => {
-                alert("Hata: " + err.message);
+                switchTab('chats');
+            });
+        }
+
+        function updateNotifBadge() {
+            const requestsList = document.getElementById('requests-list');
+            const hasRequests = requestsList.children.length > 0;
+            const hasAnnouncement = !document.getElementById('announcement-section').classList.contains('hidden');
+
+            const badge = document.getElementById('notif-badge');
+            if (hasRequests || hasAnnouncement) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function listenAnnouncements() {
+            db.ref('system_announcement').on('value', (snapshot) => {
+                const data = snapshot.val();
+                const section = document.getElementById('announcement-section');
+                const textEl = document.getElementById('announcement-text');
+                const timeEl = document.getElementById('announcement-time');
+                const noReq = document.getElementById('no-requests');
+
+                if (data && data.text) {
+                    textEl.innerText = data.text;
+                    if (data.timestamp) {
+                        const timeStr = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        timeEl.innerText = timeStr;
+                    }
+                    section.classList.remove('hidden');
+                    noReq.classList.add('hidden');
+                } else {
+                    section.classList.add('hidden');
+                }
+                updateNotifBadge();
             });
         }
 
         function listenRequests() {
-            db.ref('requests/' + myProfile.id).on('value', (snap) => {
-                const requests = snap.val() || {};
-                const list = document.getElementById('requests-list');
+            db.ref('requests/' + myProfile.id).on('value', (snapshot) => {
+                const requests = snapshot.val();
+                const container = document.getElementById('requests-list');
                 const noReq = document.getElementById('no-requests');
-                const badge = document.getElementById('notif-badge');
-                list.innerHTML = '';
-
-                const reqKeys = Object.keys(requests);
-                if (reqKeys.length > 0) {
+                
+                container.innerHTML = '';
+                if (requests && Object.keys(requests).length > 0) {
                     noReq.classList.add('hidden');
-                    badge.classList.remove('hidden');
-                } else {
-                    noReq.classList.remove('hidden');
-                    badge.classList.add('hidden');
-                }
 
-                reqKeys.forEach(senderId => {
-                    const req = requests[senderId];
-                    const div = document.createElement('div');
-                    div.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between";
-                    div.innerHTML = `
-                        <div>
-                            <h4 class="text-xs font-bold text-white">${req.fromName}</h4>
-                            <p class="text-[10px] text-slate-400 font-mono">ID: ${req.fromId}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="acceptRequest('${req.fromId}', '${req.fromName}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold">Kabul Et</button>
-                            <button onclick="rejectRequest('${req.fromId}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-xs">Reddet</button>
-                        </div>
-                    `;
-                    list.appendChild(div);
-                });
+                    Object.values(requests).forEach(req => {
+                        const div = document.createElement('div');
+                        div.className = "bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between";
+                        div.innerHTML = `
+                            <div>
+                                <h4 class="text-xs font-bold text-white">${req.fromName}</h4>
+                                <p class="text-[10px] text-slate-500 font-mono">${req.fromId}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="acceptRequest('${req.fromId}', '${req.fromName}')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs">Kabul Et</button>
+                                <button onclick="rejectRequest('${req.fromId}')" class="bg-rose-600/20 text-rose-400 px-3 py-1 rounded-lg text-xs">Reddet</button>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    const hasAnnouncement = !document.getElementById('announcement-section').classList.contains('hidden');
+                    if (!hasAnnouncement) {
+                        noReq.classList.remove('hidden');
+                    }
+                }
+                updateNotifBadge();
             });
         }
 
@@ -476,112 +426,251 @@
             if (!friends.some(f => f.id === id)) {
                 friends.push({ id: id, name: name });
                 localStorage.setItem('p2p_friends', JSON.stringify(friends));
-                renderFriends();
-                setupBackgroundNotifications();
             }
+
+            db.ref('accepted/' + id).set({
+                id: myProfile.id,
+                name: myProfile.name
+            });
+
             db.ref('requests/' + myProfile.id + '/' + id).remove();
-            db.ref('accepted/' + id + '/' + myProfile.id).set({ id: myProfile.id, name: myProfile.name });
-            alert(name + " arkadaş olarak eklendi!");
+            renderFriends();
+            alert(`${name} arkadaş olarak eklendi!`);
+        }
+
+        function listenAcceptedRequests() {
+            db.ref('accepted/' + myProfile.id).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (!friends.some(f => f.id === data.id)) {
+                        friends.push({ id: data.id, name: data.name });
+                        localStorage.setItem('p2p_friends', JSON.stringify(friends));
+                        renderFriends();
+                        alert(`${data.name} arkadaşlık isteğini kabul etti! 🎉`);
+                    }
+                    db.ref('accepted/' + myProfile.id).remove();
+                }
+            });
         }
 
         function rejectRequest(id) {
             db.ref('requests/' + myProfile.id + '/' + id).remove();
         }
 
-        function listenAcceptedRequests() {
-            db.ref('accepted/' + myProfile.id).on('child_added', (snap) => {
-                const data = snap.val();
-                if (data && !friends.some(f => f.id === data.id)) {
-                    friends.push({ id: data.id, name: data.name });
-                    localStorage.setItem('p2p_friends', JSON.stringify(friends));
-                    renderFriends();
-                    setupBackgroundNotifications();
-                }
-            });
-        }
-
-        function listenAnnouncements() {
-            db.ref('system_announcement').on('value', (snap) => {
-                const ann = snap.val();
-                if (ann && ann.text) {
-                    document.getElementById('announcement-section').classList.remove('hidden');
-                    document.getElementById('announcement-text').innerText = ann.text;
-                    document.getElementById('announcement-time').innerText = new Date(ann.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-            });
-        }
-
+        let unreadCounts = {};
         function listenUnreadMessages() {
-            // Son mesajları dinleme simülasyonu
+            friends.forEach(friend => {
+                const roomId = getRoomId(myProfile.id, friend.id);
+                db.ref('chats/' + roomId).on('value', (snap) => {
+                    const messages = snap.val();
+                    let count = 0;
+                    if (messages && (!activeRoomId || activeRoomId !== roomId)) {
+                        Object.values(messages).forEach(m => {
+                            if (m.senderId !== myProfile.id && !m.read) count++;
+                        });
+                    }
+                    unreadCounts[friend.id] = count;
+                    renderFriends();
+                });
+            });
         }
+
+        function renderFriends() {
+            const container = document.getElementById('friends-list');
+            const noFriends = document.getElementById('no-friends');
+            container.innerHTML = '';
+
+            document.getElementById('friend-count').innerText = friends.length + ' kayıtlı';
+            if (friends.length === 0) return noFriends.classList.remove('hidden');
+            noFriends.classList.add('hidden');
+
+            friends.forEach(friend => {
+                if (blockedUsers.includes(friend.id)) return;
+                const unread = unreadCounts[friend.id] || 0;
+
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between hover:border-slate-700 cursor-pointer relative";
+                div.onclick = () => openChat(friend);
+                
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-sm">
+                                ${friend.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span id="status-dot-${friend.id}" class="w-3 h-3 rounded-full bg-slate-600 border-2 border-slate-900 absolute bottom-0 right-0"></span>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-white">${friend.name}</h4>
+                            <p class="text-[10px] text-slate-500 font-mono truncate max-w-[150px]">${friend.id}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${unread > 0 ? `<span class="bg-emerald-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded-full shadow animate-pulse">${unread} yeni mesaj</span>` : ''}
+                        <button class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">Sohbet</button>
+                    </div>
+                `;
+                container.appendChild(div);
+
+                db.ref('status/' + friend.id).on('value', (sSnap) => {
+                    const dot = document.getElementById('status-dot-' + friend.id);
+                    if (dot) {
+                        const st = sSnap.val();
+                        if (st && st.state === 'online') {
+                            dot.className = "w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-900 absolute bottom-0 right-0";
+                        } else {
+                            dot.className = "w-3 h-3 rounded-full bg-slate-600 border-2 border-slate-900 absolute bottom-0 right-0";
+                        }
+                    }
+                });
+            });
+        }
+
+        function getRoomId(id1, id2) { return [id1, id2].sort().join('_'); }
 
         function openChat(friend) {
             activeFriend = friend;
-            activeRoomId = [myProfile.id, friend.id].sort().join('_');
+            activeRoomId = getRoomId(myProfile.id, friend.id);
+            unreadCounts[friend.id] = 0;
             
-            document.getElementById('chat-window').classList.remove('hidden');
-            document.getElementById('active-chat-name').innerText = friend.name;
-            document.getElementById('bottom-nav').classList.add('hidden');
             document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('bottom-nav').classList.add('hidden');
+            
+            document.getElementById('active-chat-name').innerText = friend.name;
+            document.getElementById('chat-window').classList.remove('hidden');
+            document.getElementById('friend-menu').classList.add('hidden');
+            
+            cleanOldMessages(activeRoomId);
 
-            // Durum dinleme
-            db.ref('status/' + friend.id).on('value', (snap) => {
-                const st = snap.val();
-                const statusEl = document.getElementById('active-chat-status');
-                if (st && st.state === 'online') {
-                    statusEl.innerText = "Çevrimiçi";
-                    statusEl.className = "text-[10px] text-emerald-400";
-                } else {
-                    statusEl.innerText = "Çevrimdışı";
-                    statusEl.className = "text-[10px] text-slate-500";
-                }
-            });
-
-            loadMessages();
+            listenMessages();
+            listenFriendOnlineAndTyping();
         }
 
         function closeChat() {
             document.getElementById('chat-window').classList.add('hidden');
-            document.getElementById('bottom-nav').classList.remove('hidden');
             document.getElementById('main-header').classList.remove('hidden');
-            if (chatListener && activeRoomId) {
-                db.ref('chats/' + activeRoomId).off('child_added', chatListener);
-            }
+            document.getElementById('bottom-nav').classList.remove('hidden');
+
+            if (chatListener) db.ref('chats/' + activeRoomId).off();
+            db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
             activeFriend = null;
             activeRoomId = null;
+            renderFriends();
         }
 
-        function loadMessages() {
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
+        function cleanOldMessages(roomId) {
+            const chatRef = db.ref('chats/' + roomId);
+            const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
 
-            chatListener = db.ref('chats/' + activeRoomId).on('child_added', (snap) => {
-                const msg = snap.val();
-                if (!msg) return;
-
-                const isMe = msg.senderId === myProfile.id;
-                const div = document.createElement('div');
-                div.className = `flex flex-col max-w-[80%] ${isMe ? 'self-end items-end' : 'self-start items-start'} mb-2`;
-
-                let contentHtml = '';
-                if (msg.type === 'image') {
-                    contentHtml = `<img src="${msg.mediaUrl}" class="rounded-xl max-h-48 object-cover mb-1">`;
-                } else if (msg.type === 'video') {
-                    contentHtml = `<video src="${msg.mediaUrl}" controls class="rounded-xl max-h-48 object-cover mb-1"></video>`;
-                }
-                if (msg.text) {
-                    contentHtml += `<p class="text-xs leading-relaxed">${msg.text}</p>`;
-                }
-
-                div.innerHTML = `
-                    <div class="p-3 rounded-2xl ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-100 rounded-bl-none'} shadow">
-                        ${contentHtml}
-                    </div>
-                    <span class="text-[9px] text-slate-500 mt-1 font-mono">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                `;
-                container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
+            chatRef.orderByChild('timestamp').endAt(twentyFourHoursAgo).once('value', (snapshot) => {
+                snapshot.forEach((childSnapshot) => {
+                    childSnapshot.ref.remove();
+                });
             });
+        }
+
+        function handleTyping() {
+            if (!activeRoomId) return;
+            db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(true);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
+            }, 2000);
+        }
+
+        function listenFriendOnlineAndTyping() {
+            const statusEl = document.getElementById('active-chat-status');
+
+            db.ref('typing/' + activeRoomId + '/' + activeFriend.id).on('value', (tSnap) => {
+                if (tSnap.val() === true) {
+                    statusEl.innerText = "Yazıyor...";
+                    statusEl.className = "text-[10px] text-amber-400 font-bold animate-pulse";
+                } else {
+                    db.ref('status/' + activeFriend.id).on('value', (sSnap) => {
+                        const st = sSnap.val();
+                        if (st && st.state === 'online') {
+                            statusEl.innerText = "Çevrim içi";
+                            statusEl.className = "text-[10px] text-emerald-400 font-medium";
+                        } else {
+                            statusEl.innerText = "Çevrim dışı";
+                            statusEl.className = "text-[10px] text-slate-500 font-medium";
+                        }
+                    });
+                }
+            });
+        }
+
+        function listenMessages() {
+            const container = document.getElementById('message-container');
+            if (chatListener) db.ref('chats/' + activeRoomId).off();
+
+            chatListener = db.ref('chats/' + activeRoomId).on('value', (snapshot) => {
+                container.innerHTML = '';
+                const data = snapshot.val();
+                if (data) {
+                    Object.entries(data).forEach(([msgId, msg]) => {
+                        if (msg.senderId !== myProfile.id && !msg.read) {
+                            db.ref('chats/' + activeRoomId + '/' + msgId + '/read').set(true);
+                        }
+
+                        const isMe = msg.senderId === myProfile.id;
+                        const div = document.createElement('div');
+                        div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} group mb-1`;
+                        
+                        let mediaContent = '';
+                        if (msg.mediaType === 'image') {
+                            mediaContent = `<img src="${msg.mediaUrl}" class="rounded-lg max-w-full max-h-48 mb-1 object-cover">`;
+                        } else if (msg.mediaType === 'video') {
+                            mediaContent = `<video src="${msg.mediaUrl}" controls class="rounded-lg max-w-full max-h-48 mb-1"></video>`;
+                        }
+
+                        div.innerHTML = `
+                            <span class="text-[9px] font-bold text-slate-400 mb-0.5 px-1">${isMe ? 'Sen' : activeFriend.name}</span>
+                            <div onclick="${isMe ? `handleMessageAction('${msgId}', '${msg.text || ''}')` : ''}" class="max-w-[80%] rounded-2xl px-3.5 py-2 text-xs relative cursor-pointer ${isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none'}">
+                                ${mediaContent}
+                                ${msg.text ? `<div>${msg.text}</div>` : ''}
+                                ${msg.edited ? '<span class="text-[8px] opacity-60 ml-1">(düzenlendi)</span>' : ''}
+                            </div>
+                            <div class="flex items-center gap-1 text-[9px] text-slate-500 mt-0.5 px-1">
+                                <span>${msg.time}</span>
+                                ${isMe ? `<i class="fa-solid fa-check-double ${msg.read ? 'text-emerald-400' : 'text-slate-600'}"></i>` : ''}
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.innerHTML = '<div class="text-center text-xs text-slate-600 py-4">Henüz mesaj yok. İlk mesajı sen yaz!</div>';
+                }
+            });
+        }
+
+        function sendMediaMessage(event) {
+            const file = event.target.files[0];
+            if (!file || !activeRoomId) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Lütfen 5MB'dan küçük bir dosya seçin!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const mediaUrl = e.target.result;
+                const type = file.type.startsWith('image/') ? 'image' : 'video';
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                db.ref('chats/' + activeRoomId).push().set({
+                    senderId: myProfile.id,
+                    mediaUrl: mediaUrl,
+                    mediaType: type,
+                    text: '',
+                    time: time,
+                    timestamp: Date.now(),
+                    read: false
+                });
+            };
+            reader.readAsDataURL(file);
         }
 
         function sendMessage() {
@@ -589,73 +678,69 @@
             const text = input.value.trim();
             if (!text || !activeRoomId) return;
 
-            db.ref('chats/' + activeRoomId).push({
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            db.ref('chats/' + activeRoomId).push().set({
                 senderId: myProfile.id,
-                senderName: myProfile.name,
                 text: text,
-                type: 'text',
-                timestamp: Date.now()
+                time: time,
+                timestamp: Date.now(),
+                read: false
             });
 
+            db.ref('typing/' + activeRoomId + '/' + myProfile.id).set(false);
             input.value = '';
         }
 
-        function sendMediaMessage(e) {
-            const file = e.target.files[0];
-            if (!file || !activeRoomId) return;
-
-            const reader = new FileReader();
-            reader.onload = function(uploadEvent) {
-                const base64Data = uploadEvent.target.result;
-                const type = file.type.startsWith('image') ? 'image' : 'video';
-
-                db.ref('chats/' + activeRoomId).push({
-                    senderId: myProfile.id,
-                    senderName: myProfile.name,
-                    mediaUrl: base64Data,
-                    type: type,
-                    timestamp: Date.now()
-                });
-            };
-            reader.readAsDataURL(file);
+        function handleMessageAction(msgId, currentTest) {
+            const action = prompt("Mesajı ne yapmak istersin?\n1: Düzenle\n2: Sil\n(İptal için boş bırak)", "1");
+            if (action === "1") {
+                const newText = prompt("Yeni mesajı girin:", currentTest);
+                if (newText && newText !== currentTest) {
+                    db.ref('chats/' + activeRoomId + '/' + msgId).update({ text: newText, edited: true });
+                }
+            } else if (action === "2") {
+                if (confirm("Mesajı silmek istediğine emin misin?")) {
+                    db.ref('chats/' + activeRoomId + '/' + msgId).remove();
+                }
+            }
         }
-
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
-        }
-
-        function handleTyping() {}
 
         function toggleFriendMenu() {
-            const menu = document.getElementById('friend-menu');
-            menu.classList.toggle('hidden');
+            document.getElementById('friend-menu').classList.toggle('hidden');
         }
 
         function renameFriend() {
-            const newName = prompt("Yeni isim girin:", activeFriend.name);
-            if (!newName) return;
-            friends = friends.map(f => f.id === activeFriend.id ? { ...f, name: newName } : f);
-            localStorage.setItem('p2p_friends', JSON.stringify(friends));
-            document.getElementById('active-chat-name').innerText = newName;
-            renderFriends();
-            toggleFriendMenu();
+            const newName = prompt("Arkadaşın için yeni bir takma ad girin:", activeFriend.name);
+            if (newName) {
+                activeFriend.name = newName;
+                const idx = friends.findIndex(f => f.id === activeFriend.id);
+                if (idx !== -1) friends[idx].name = newName;
+                localStorage.setItem('p2p_friends', JSON.stringify(friends));
+                document.getElementById('active-chat-name').innerText = newName;
+                renderFriends();
+            }
         }
 
         function blockFriend() {
-            if (confirm("Bu kullanıcıyı engellemek istiyor musun?")) {
+            if (confirm(`${activeFriend.name} kullanıcısını engellemek istediğine emin misin?`)) {
                 blockedUsers.push(activeFriend.id);
                 localStorage.setItem('p2p_blocked', JSON.stringify(blockedUsers));
-                deleteFriend();
+                closeChat();
+                renderFriends();
             }
         }
 
         function deleteFriend() {
-            if (confirm("Bu arkadaşı silmek istediğine emin misin?")) {
+            if (confirm(`${activeFriend.name} arkadaşını listeden silmek istiyor musun?`)) {
                 friends = friends.filter(f => f.id !== activeFriend.id);
                 localStorage.setItem('p2p_friends', JSON.stringify(friends));
                 closeChat();
                 renderFriends();
             }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
         }
     </script>
 </body>
